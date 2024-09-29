@@ -1,0 +1,3 @@
+B:/marwan programmer/VSCode projects/assignments/cmake-build-debug/CMakeFiles/assignments.dir
+B:/marwan programmer/VSCode projects/assignments/cmake-build-debug/CMakeFiles/edit_cache.dir
+B:/marwan programmer/VSCode projects/assignments/cmake-build-debug/CMakeFiles/rebuild_cache.dir
