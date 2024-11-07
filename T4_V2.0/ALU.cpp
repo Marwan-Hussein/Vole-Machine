@@ -161,3 +161,14 @@ string ALU::add_float(string h1, string h2)
     string hexa = binToHexa(binary);
     return hexa;
 }
+string ALU::bitwiseXOR(string hex1, string hex2) {
+
+    bitset<8> bin1(hextodecimal(hex1));
+    bitset<8> bin2(hextodecimal(hex2));
+
+
+    bitset<8> xorResult = bin1 ^ bin2;
+
+
+    return binToHexa(xorResult.to_string());
+}
