@@ -1,0 +1,77 @@
+Mem	|	Instruction
+------|----------------
+0A	|	2006
+0C	|	2100
+0E	|	2201
+10	|	2300
+12	|	2401
+14	|	2501
+16	|	2620
+18	|	2730
+1A	|	28D0
+1C	|	5227
+1E	|	3200
+20	|	5228
+22	|	3600
+24	|	5123
+26	|	3101
+28	|	5117
+2A	|	3100
+2C	|	5118
+2E	|	3600
+30	|	4023
+32	|	1201
+34	|	5445
+36	|	B43A
+38	|	B024
+3A	|	C000
+	
+
+
+
+Instruction Set:
+1) Load R0 with 6 (Target)
+2) Load R1 with 0 (Result)
+3) Load R2 with 1 (Num1)
+4) Load R3 with 0 (Num2)
+5) Load R4 with 1 (Counter)
+6) Load R5 with 1 (Incrementer)
+7) Load R6 with 20 (Space)
+8) Load R7 with 30 (ACII)
+9) Load R8 with D0 (!ASCII)
+10) Add R2 with R7 into R2
+11) Store R2 into M0
+12) Add R2 with R8 into R2
+13) Store R6 into M0
+14) Add R2 with R3 into R1
+15) Store R1 into M1
+16) Add R1 with R7 into R1
+17) Store R1 into M0
+18) Add R1 with R8 into R1
+19) Store R6 into M0
+20) Move R2 to R3
+21) Load R2 with M1
+22) Add R4 with R5 into R4
+23) Compare R4 with R0 -> Step 25
+24) Comapre R0 with R0 -> Step 14
+25) Halt
+
+Explanation:
+We load R0 with 6 since we want to print the first 6 numbers in Fibonacci's sequence
+We load R1 with 0 as it will store the result of the addition
+We load R2 with 1 and R3 with 0 because they will be used in the addition
+We load R4 with 1 as it will be the counter for the loop
+We load R5 with 1 as this will be the value we increment the counter with
+We load R6 with 0x20, this represents SPACE in ASCII code
+We load R7 with 0x30, this represents the character 0 in ASCII and will be used in correction to print the result
+We load R8 with 0xD0 (-48), this will be used to remove the correction that was done so we can continue the program successfully
+We correct R2 by R7 and print it, remove the correction, then print a space using R6
+* We add R2 and R3 and store the result in R1
+We store R1 in M1 then we correct R1 using R6, then we print R1, then remove the correction using R8 then print a space
+We move the value in R2 to R3 (R2 -> R3) and set the value of R2 to M1
+We then increment the counter (R4) using R5
+We compare the counter (R4) with the target (R0), if equal then HALT
+We compare R0 with R0, which will always be true, so we go to *
+
+Expected Output:
+1 1 2 3 5 8 

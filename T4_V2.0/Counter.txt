@@ -1,0 +1,41 @@
+MEM	|	Instruction
+--------|-------------------
+0A	|	2000
+0C	|	2130
+0E	|	2201
+10	|	23C6
+12	|	2420
+14	|	3100
+16	|	3400
+18	|	5112
+1A	|	3101
+1C	|	5113
+1E	|	B124
+20	|	1101
+22	|	B014
+24	|	C000
+
+Instruction Set:
+1) Load R0 with 00
+2) Load R1 with 30
+3) Load R2 with 01
+4) Load R3 with C6
+5) Load R4 with 20
+6) Load R1 to M0
+7) Load R4 to M0
+8) Add R1 with R2 into R1
+9) Store R1 to M1
+10) Add R1 with R3 into R1
+11) Comp R1 with R0
+12) Load R1 with M1
+13) Comp R0 with R0
+
+Explanation:
+We load 0 in ASCII to R1 (counter) and load 1 to R2 (incrementer)
+We also load C6 (-58) to R3 and load SPACE in ASCII to R4
+We print R1 and R4, then we add to R2 to R1 to increment it, we store the new value in the M1
+We add R1 to R3 and compare the result to R0, if true jump to HALT *
+Load R1 with the value at M1 then compare R0 with R0 so we jump to step 6
+
+Expected Output:
+0 1 2 3 4 5 6 7 8 9

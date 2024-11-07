@@ -1,0 +1,511 @@
+ALU.cpp:
+#include "ALU.h"
+#include <bits/stdc++.h>
+
+using namespace std;
+
+int ALU::hextodecimal(string hexValue)
+{
+    int decimalValue;
+    decimalValue = stoi(hexValue, nullptr, 16);
+    return decimalValue;
+}
+
+string ALU::floattobin(float fVal)
+{
+    int sign = fVal < 0 ? 1 : 0;
+    if (fVal < -7.5)
+        fVal = -7.5;
+    if (fVal > 7.5)
+        fVal = 7.5;
+    fVal = fabs(fVal);
+
+    int integerPart = static_cast<int>(fVal);
+    float fractionalPart = fVal - integerPart;
+    string binary;
+
+    if (integerPart == 0)
+    {
+        binary = "0";
+    }
+    else
+    {
+        while (integerPart > 0 && integerPart < 8)
+        {
+            binary = to_string(integerPart % 2) + binary;
+            integerPart /= 2;
+        }
+    }
+
+    if (fractionalPart > 0)
+    {
+        binary += ".";
+        while (fractionalPart > 0)
+        {
+            fractionalPart *= 2;
+            int fractionalBit = static_cast<int>(fractionalPart);
+            binary += to_string(fractionalBit);
+            fractionalPart -= fractionalBit;
+
+            if (binary.length() > 8)
+            {
+                break;
+            }
+        }
+    }
+    // cout<<binary<<endl;
+    string mantissa;
+    int exp = 0;
+
+    auto it = find(binary.begin(), binary.end(), '.');
+
+    if (fVal > 1.0)
+    {
+        exp = it - binary.begin();
+        mantissa += binary.substr(0, exp);
+        mantissa += binary.substr(exp + 1, 4 - exp);
+    }
+    else
+    {
+        int val = it - binary.begin();
+        int indx = 0;
+        for (int i = val + 1; i < binary.size(); ++i)
+        {
+            if (binary[i] == '1')
+            {
+                indx = i;
+                break;
+            }
+            --exp;
+            if (exp == -4)
+            {
+                indx = i + 1;
+                break;
+            }
+        }
+        mantissa = binary.substr(indx, 4);
+    }
+
+    int biasedexp = exp + 4;
+    while (mantissa.size() < 4)
+    {
+        mantissa += '0';
+    }
+
+    return to_string(sign) + bitset<3>(biasedexp).to_string() + mantissa;
+}
+
+float ALU::hextofloat(string binary)
+{
+    int num = hextodecimal(binary);
+    bitset<8> bs(num);
+    string binnum = bs.to_string();
+    int sign = binnum[0] == '1' ? -1 : 1;
+    int expo = stoi(binnum.substr(1, 3), nullptr, 2);
+    int mantissa = stoi(binnum.substr(4), nullptr, 2);
+
+    float result = sign * pow(2, expo - 4) * (mantissa / 16.0);
+    return result;
+}
+
+string ALU::add(string hex1, string hex2)
+{
+
+    float num1 = hextofloat(hex1);
+    float num2 = hextofloat(hex2);
+
+    if (num1 >= 0x80)
+        num1 -= 0x100;
+    if (num2 >= 0x80)
+        num2 -= 0x100;
+
+    int sum = num1 + num2;
+
+    if (sum < 0)
+        sum += 256;
+
+    return decimaltohex(sum);
+}
+
+string ALU::decimaltohex(int decimalValue)
+{
+    if (decimalValue < 0)
+    {
+        decimalValue += 0x100;
+    }
+
+    stringstream ss;
+    ss << hex << uppercase << setw(2) << setfill('0') << (decimalValue & 0xFF);
+    return ss.str();
+}
+string ALU::binToHexa(string bin)
+{
+    unsigned long binValue = bitset<8>(bin).to_ulong();
+    stringstream ss;
+    ss << hex << binValue;
+    string hexValue = ss.str();
+    for (char &c : hexValue)
+    {
+        c = toupper(c);
+    }
+    return hexValue;
+}
+
+string ALU::add_float(string h1, string h2)
+{
+    float x1 = hextofloat(h1);
+    float x2 = hextofloat(h2);
+    float sum = x1 + x2;
+    // cout<<x1<<" "<<x2<<" "<<sum<<endl;
+    string binary = floattobin(sum);
+    // cout<<binary<<endl;
+    string hexa = binToHexa(binary);
+    return hexa;
+}
+
+ControlUnit.cpp:
+#include <iostream>
+#include "ControlUnit.h"
+
+using namespace std;
+
+ControlUnit::ControlUnit(CPU *c, Memory *m) : cpu(c), memory(m) {}
+
+void ControlUnit::fetchExecuteCycle()
+{
+    cout << "Starting fetch-execute cycle...\n";
+    while (true)
+    {
+        string instruction = cpu->fetchInstruction();
+        if (instruction == "HALT")
+        {
+            break;
+        }
+        cpu->executeNextInstruction();
+        cpu->displayState();
+
+        // Step-by-step execution control
+        string cont;
+        cout << "Press Enter to continue or 'q' to quit: ";
+        getline(cin, cont);
+        if (cont == "q")
+            break;
+    }
+    cout << "Program completed.\n";
+}
+
+void ControlUnit::reset()
+{
+    cpu->setProgramCounter(0);
+}
+
+CPU.cpp:
+#include "CPU.h"
+#include "ALU.h"
+#include <iostream>
+
+using namespace std;
+
+CPU::CPU(Memory *mem) : memory(mem) {}
+
+void CPU::setProgramCounter(int pc)
+{
+    programCounter = pc;
+}
+
+int CPU::getProgramCounter() const
+{
+    return programCounter;
+}
+
+string CPU::fetchInstruction()
+{
+    instructionRegister = memory->getcell(programCounter);
+    programCounter += 2;
+    return instructionRegister;
+}
+
+void CPU::executeNextInstruction()
+{
+
+    string instruction = instructionRegister;
+    char opcode = instruction[0];
+    int reg, address, reg2, reg3;
+    string hex1, hex2;
+    string content_of_memory;
+    ALU alu;
+    switch (opcode)
+    {
+    case '1': // 15A7 ==> R5 = mem(A7)
+        reg = alu.hextodecimal(instruction.substr(1, 1));
+        registers.setcell(reg, memory->getcell(alu.hextodecimal(instruction.substr(2, 2))));
+        break;
+
+    case '2': // 25A7 ==> R5 = A7
+        reg = alu.hextodecimal(instruction.substr(1, 1));
+        registers.setcell(reg, instruction.substr(2, 2));
+        break;
+
+    case '3': // 35A7 ==> mem(A7) = R5
+        reg = alu.hextodecimal(instruction.substr(1, 1));
+        address = alu.hextodecimal(instruction.substr(2, 2));
+        memory->setcell(address, registers.getcell(reg));
+        break;
+
+    case '4':                                              // 40A7 ==> RA = R7
+        reg = alu.hextodecimal(instruction.substr(2, 1));  // A
+        reg2 = alu.hextodecimal(instruction.substr(3, 1)); // 7
+        registers.setcell(reg, registers.getcell(reg2));
+        break;
+
+    case '5': // 5547 ==> R5 = R4 + R7
+        reg = alu.hextodecimal(instruction.substr(2, 1));
+        hex1 = registers.getcell(reg);
+        reg2 = alu.hextodecimal(instruction.substr(3, 1));
+        reg3 = alu.hextodecimal(instruction.substr(3, 1));
+        hex2 = registers.getcell(reg2);
+        registers.setcell(reg3, alu.add(hex1, hex2));
+        break;
+
+    case '6':
+        reg = alu.hextodecimal(instruction.substr(2, 1));
+        hex1 = registers.getcell(reg);
+        reg2 = alu.hextodecimal(instruction.substr(3, 1));
+        reg3 = alu.hextodecimal(instruction.substr(3, 1));
+        hex2 = registers.getcell(reg2);
+        registers.setcell(reg3, alu.add_float(hex1, hex2));
+        break;
+
+    case 'B': // B5A7==> (R5 = R0? jump to mem(A7))
+        reg = alu.hextodecimal(instruction.substr(1, 1));
+        content_of_memory = memory->getcell(alu.hextodecimal(instruction.substr(2, 2)));
+        address = alu.hextodecimal(content_of_memory);
+        if (registers.getcell(reg) == registers.getcell(0))
+        {
+            setProgramCounter(address);
+            // jump to the instruction line (address/2) in f
+        }
+        break;
+
+    case 'C':
+        cout << "HALT: Execution terminated.\n";
+        programCounter = -2;
+        break;
+    }
+    // Additional instructions like LOAD, STORE, etc. would be implemented here
+}
+
+void CPU::displayState() const
+{
+    cout << "CPU State:\n";
+    cout << "\tProgram Counter: " << programCounter << "\n";
+    cout << "\tInstruction Register: " << instructionRegister << "\n";
+    // Display additional register or memory information as needed
+}
+
+machine.cpp:
+#include <iostream>
+#include <string>
+#include <fstream>
+#include "CPU.h"
+#include "Memory.h"
+#include "Machine.h"
+#include "MainUI.h"
+using namespace std;
+
+Machine::Machine() : processor(&memory) {}
+void Machine::loadProgramFile(string &fileName)
+{
+    MainUI mainui;
+    ifstream f(fileName);
+    while (!f.good())
+    {
+        cout << "not existing file please input again: ";
+        cin >> fileName;
+        f.open(fileName);
+        }
+    if (!mainui.isvalid_fileINstructions(fileName))
+    {
+        f.close();
+        cout << "Invalid instructions in this file please input a correct instructions file.\n";
+        mainui.inputFileName();
+        return;
+    }
+    cout << fileName << " loaded successfully.\n";
+    int address = 0;
+    string line;
+    while (getline(f, line))
+    {
+        if (line.length() != 4)
+        {
+            cout << "invalid instruction: " << line << "\npleas load valid program file.";
+            line = "C000";
+        }
+        memory.setcell(address++, line);
+    }
+    f.close();
+}
+
+void Machine::outputState() const
+{
+    cout << "Machine State:\n";
+    processor.displayState(); // from cpu
+    // memory.displayState();    // from memory
+}
+
+void Machine::runStepByStep()
+{
+    cout << "Running program step-by-step.\n";
+    while (true)
+    {
+        string instruction = memory.getcell(processor.getProgramCounter());
+        if (instruction == "HALT" || instruction == "00")
+        {
+            "Execution halted.\n";
+            break;
+        }
+        processor.executeNextInstruction();
+        outputState();
+        cout << "Press Enter to continue to the next step: \n";
+        cin.ignore(); // continue inputting until press enter
+    }
+}
+
+main.cpp:
+#include <iostream>
+#include "mainUI.h"
+
+using namespace std;
+int main()
+{
+    MainUI mainUI;
+    while (true)
+    {
+        mainUI.displayMenu();
+        mainUI.inputChoice();
+    }
+    return 0;
+}
+
+mainUI.cpp:
+#include <iostream>
+#include <string>
+#include <fstream>
+#include "Machine.h"
+#include "MainUI.h"
+using namespace std;
+
+void MainUI::displayMenu()
+{
+    cout << "\nVole Machine Simulator\n"
+            "1. Load program from file\n"
+            "2. Display machine state\n"
+            "3. Run program step-by-step\n"
+            "4. Exit\n"
+            "Enter your choice: ";
+}
+
+void MainUI::inputChoice()
+{
+    string choice;
+inchoice:
+    cin >> choice;
+
+    if (choice == "1")
+        inputFileName();
+    else if (choice == "2")
+        machine.outputState();
+    else if (choice == "3")
+    {
+        string fileName;
+        cout << "Enter the program file name: ";
+        cin >> fileName;
+        machine.loadProgramFile(fileName);
+        machine.runStepByStep();
+    }
+    else if (choice == "4")
+    {
+        cout << "Exiting the simulator.\n";
+        exit(0);
+    }
+    else
+    {
+        cout << "invalid choice plz try again: ";
+        goto inchoice;
+    }
+}
+
+void MainUI::inputFileName()
+{
+    string fileName;
+    cout << "Enter the program file name: ";
+    cin >> fileName;
+    machine.loadProgramFile(fileName);
+}
+
+bool MainUI::isvalid_fileINstructions(string &file)
+{
+    ifstream f(file);
+    string line;
+    while (getline(f, line))
+    {
+        if (line.length() != 4)
+            return 0;
+        if (line[0] < '1' || line[0] > 'D')
+            return 0;
+        for (int i = 1; i < 4; ++i)
+            if (line[i] < '0' || line[i] > 'F')
+                return 0;
+        if (line[0] == '4' && line[1] != '0')
+            return 0;
+        if (line[0] == 'C' && line.substr(1, 3) != "000")
+            return 0;
+    }
+    return 1;
+}
+
+Memory.cpp:
+#include <vector>
+#include <string>
+#include <iostream>
+#include "Memory.h"
+using namespace std;
+
+Memory::Memory()
+{
+    memory.resize(256);
+}
+
+void Memory::setcell(int address, const string &val)
+{
+    if (address == 0)
+        cout << "output to screen: " << val << '\n';
+    if (address >= 0 && address < 256)
+    {
+        memory[address] = val;
+    }
+}
+
+string Memory::getcell(int address) const
+{
+    return (address >= 0 && address < 256) ? memory[address] : "0A";
+}
+
+Register.cpp:
+#include "Register.h"
+using namespace std;
+Register::Register()
+{
+    reggister.resize(16);
+}
+void Register::setcell(int address, const string &val)
+{
+    if (address >= 0 && address < 16)
+    {
+        reggister[address] = val;
+    }
+}
+string Register::getcell(int address) const
+{
+    return address >= 0 && address < 16 ? reggister[address] : "00";
+}
