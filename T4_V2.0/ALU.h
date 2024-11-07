@@ -16,6 +16,7 @@ public:
     string decimaltohex(int decimalValue);
     string binToHexa(string bin);
     string add_float(string h1, string h2);
+    string bitwiseXOR(string hex1, string hex2);
 };
 
 #endif // ALU_H
